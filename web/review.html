@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#12171d" />
+    <title>ECG Studio · Recording review</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body class="review-window">
+    <main>
+      <section class="panel" aria-labelledby="review-title">
+        <div class="panel-heading">
+          <div class="panel-title"><h1 id="review-title">Recording review</h1><span class="badge">NO RECORDING</span></div>
+          <div class="speed-control" role="group" aria-label="Recording paper speed">
+            <button class="selected" type="button" data-speed="25" aria-pressed="true">25 mm/s</button>
+            <button type="button" data-speed="50" aria-pressed="false">50 mm/s</button>
+          </div>
+        </div>
+        <div class="strip-viewport" tabindex="0" role="region" aria-label="ECG recording strip, scroll horizontally">
+          <div class="ecg-paper recording-strip" data-paper-speed="25" role="img" aria-label="Empty ECG recording strip for Lead I">
+            <span class="lead-label">I <span>Lead I</span></span>
+            <span class="paper-scale">25 mm/s · 10 mm/mV</span>
+          </div>
+        </div>
+        <div class="panel-footer"><span>No recording</span><span>Duration — / Samples —</span></div>
+      </section>
+      <footer class="app-footer">Experimental prototype. Not for medical or diagnostic use. Screen scale is approximate.</footer>
+    </main>
+  </body>
+</html>

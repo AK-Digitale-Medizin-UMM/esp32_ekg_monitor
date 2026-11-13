@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#12171d" />
+    <title>ECG Studio · Monitor</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="./" aria-label="ECG Studio home">
+          <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M3 17h7l3-9 6 17 3-8h7" /></svg></span>
+          <span>ECG<span class="brand-light"> Studio</span><small>AK Digitale Medizin</small></span>
+        </a>
+        <div class="header-status"><span class="status-dot"></span> Device not connected <span class="prototype-tag">UI PROTOTYPE</span></div>
+      </header>
+
+      <main>
+        <div class="page-heading">
+          <div><h1>ECG monitor</h1></div>
+          <span class="lead-badge"><span class="status-dot"></span> Single-lead setup</span>
+        </div>
+
+        <section class="metrics" aria-label="Signal measurements">
+          <article class="metric"><div class="metric-label">HEART RATE <span aria-hidden="true">♡</span></div><div class="metric-value">— <span>BPM</span></div><p>Waiting for signal</p></article>
+          <article class="metric"><div class="metric-label">R–R INTERVAL <span aria-hidden="true">↔</span></div><div class="metric-value">— <span>ms</span></div><p>No beats detected</p></article>
+          <article class="metric"><div class="metric-label">SIGNAL QUALITY <span aria-hidden="true">▥</span></div><div class="metric-value metric-text">No signal</div><p>Connect a device to begin</p></article>
+          <article class="metric"><div class="metric-label">ACTIVE LEADS <span aria-hidden="true">⌁</span></div><div class="metric-value">01 <span>/ 01</span></div><p>Single channel · Lead I</p></article>
+        </section>
+
+        <section class="panel live-panel" aria-labelledby="live-title">
+          <div class="panel-heading"><div class="panel-title"><span class="section-icon" aria-hidden="true">⌁</span><h2 id="live-title">Live monitor</h2><span class="badge">STANDBY</span></div><div class="speed-control" role="group" aria-label="Live monitor paper speed"><span>Paper speed</span><button class="selected" type="button" data-speed="25" aria-pressed="true">25 mm/s</button><button type="button" data-speed="50" aria-pressed="false">50 mm/s</button></div></div>
+          <div class="ecg-paper" id="live-paper" data-paper-speed="25" role="img" aria-label="Empty ECG grid for Lead I. No device connected.">
+            <span class="lead-label">I <span>Lead I</span></span>
+            <div class="empty-state"><span class="empty-icon" aria-hidden="true">⌁</span><h3>No signal</h3></div>
+            <span class="paper-scale">25 mm/s · 10 mm/mV</span>
+          </div>
+          <div class="panel-footer"><span><span class="status-dot"></span> Awaiting connection</span><span>Lead I <span class="footer-divider">/</span> Gain 10 mm/mV</span></div>
+        </section>
+
+        <div class="recording-layout">
+          <section class="panel capture-panel" aria-labelledby="capture-title">
+            <div class="panel-heading"><div class="panel-title"><span class="section-icon" aria-hidden="true">◉</span><h2 id="capture-title">Recording</h2></div></div>
+            <div class="capture-content"><label for="duration">Recording duration</label><div class="duration-input"><input id="duration" type="number" min="1" max="300" step="1" value="10" aria-describedby="duration-help" /><span>seconds</span></div><div class="duration-presets" role="group" aria-label="Preset recording duration"><button type="button" data-duration="5" aria-pressed="false">5 s</button><button type="button" class="selected" data-duration="10" aria-pressed="true">10 s</button><button type="button" data-duration="30" aria-pressed="false">30 s</button><button type="button" data-duration="60" aria-pressed="false">60 s</button></div><p class="field-hint" id="duration-help">1–300 seconds</p><div class="recording-progress"><div><span>Recording progress</span><span>Not started</span></div><progress value="0" max="100" aria-label="Recording progress">0%</progress></div><button class="record-button" type="button" disabled><span aria-hidden="true">●</span> Start recording</button><p class="capture-note">Recording unavailable</p></div>
+          </section>
+
+          <section class="panel review-panel" aria-labelledby="review-title">
+            <div class="panel-heading"><div class="panel-title"><span class="section-icon" aria-hidden="true">▤</span><h2 id="review-title">Recording review</h2><span class="badge">NO SAMPLE</span></div></div>
+            <div class="review-launcher"><a class="review-link" href="review.html" target="ecg-recording-review">Open recording review ↗</a></div>
+            <div class="panel-footer"><span>Duration <strong>—</strong><span class="footer-divider">/</span> Samples <strong>—</strong></span><button class="text-button" type="button" disabled>Clear recording</button></div>
+          </section>
+        </div>
+        <footer class="app-footer"><span><span class="notice-icon" aria-hidden="true">i</span> Experimental prototype. Not for medical or diagnostic use.</span><span>ECG Studio <span class="footer-divider">·</span> Interface preview</span></footer>
+      </main>
+    </div>
+  </body>
+</html>

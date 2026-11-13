@@ -1,0 +1,17 @@
+# ESP-IDF generated build and local configuration
+/build/
+/sdkconfig
+/sdkconfig.old
+
+# ESP-IDF Component Manager downloads (keep dependencies.lock tracked)
+/managed_components/
+
+# Local Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local environment secrets (keep examples tracked)
+.env
+.env.*
+!.env.example

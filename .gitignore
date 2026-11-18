@@ -18,3 +18,4 @@ __pycache__/
 
 # Generated synthetic ECG samples
 /ecgsyn/ecgsyn.dat
+/web/data/ecgsyn.dat

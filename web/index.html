@@ -34,11 +34,12 @@
         <section class="panel live-panel" aria-labelledby="live-title">
           <div class="panel-heading"><div class="panel-title"><span class="section-icon" aria-hidden="true">⌁</span><h2 id="live-title">Live monitor</h2><span class="badge">STANDBY</span></div><div class="speed-control" role="group" aria-label="Live monitor paper speed"><span>Paper speed</span><button class="selected" type="button" data-speed="25" aria-pressed="true">25 mm/s</button><button type="button" data-speed="50" aria-pressed="false">50 mm/s</button></div></div>
           <div class="ecg-paper" id="live-paper" data-paper-speed="25" role="img" aria-label="Empty ECG grid for Lead I. No device connected.">
+            <canvas class="ecg-trace" aria-hidden="true"></canvas>
             <span class="lead-label">I <span>Lead I</span></span>
             <div class="empty-state"><span class="empty-icon" aria-hidden="true">⌁</span><h3>No signal</h3></div>
             <span class="paper-scale">25 mm/s · 10 mm/mV</span>
           </div>
-          <div class="panel-footer"><span><span class="status-dot"></span> Awaiting connection</span><span>Lead I <span class="footer-divider">/</span> Gain 10 mm/mV</span></div>
+          <div class="panel-footer"><span id="synthetic-status" role="status">Awaiting connection</span><button class="synthetic-button" id="play-synthetic" type="button">Play synthetic ECG</button><label><input id="loop-synthetic" type="checkbox" /> Loop</label><span>Lead I <span class="footer-divider">/</span> Gain 10 mm/mV</span></div>
         </section>
 
         <div class="recording-layout">

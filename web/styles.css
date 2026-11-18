@@ -98,6 +98,11 @@ progress::-webkit-progress-bar { background: #303b47; }
 .record-button { background: #2b3839; color: #a0afad; }
 .text-button { color: #a1adba; }
 .ecg-paper { color-scheme: light; }
+.ecg-trace { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.review-trace { left: var(--review-offset, 0px); right: auto; width: var(--review-width, 100%); }
+.ecg-paper .empty-state[hidden] { display: none; }
+.synthetic-button { border: 1px solid currentColor; border-radius: 5px; background: transparent; color: var(--accent); padding: 6px 10px; }
+.live-panel .panel-footer { flex-wrap: wrap; }
 .review-link { display: inline-block; padding: 10px 14px; border: 1px solid #3b675c; border-radius: 6px; background: #233d38; color: var(--accent); text-decoration: none; font-size: 12px; }
 .review-launcher { padding: 0 22px 22px; }
 .review-window main { max-width: none; padding: 24px; }

@@ -1,0 +1,53 @@
+menu "EKG Sender"
+
+    config EKG_WIFI_SSID
+        string "WLAN SSID"
+        default "Wokwi-GUEST"
+        help
+            Name des WLANs. "Wokwi-GUEST" funktioniert im Wokwi-Simulator.
+
+    config EKG_WIFI_PASSWORD
+        string "WLAN Passwort"
+        default ""
+
+    config EKG_SERVER_URL
+        string "Server-URL (Ingest-Endpunkt)"
+        default "http://192.168.0.10:8000/api/v1/ingest"
+        help
+            IP des Laptops, auf dem pc-server läuft, plus /api/v1/ingest.
+
+    config EKG_DEVICE_ID
+        string "Geräte-ID"
+        default "esp32-01"
+
+    config EKG_SAMPLE_RATE_HZ
+        int "Abtastrate (Hz)"
+        default 250
+        range 50 1000
+
+    config EKG_SAMPLES_PER_PACKET
+        int "Samples pro Paket"
+        default 25
+        range 5 200
+
+    config EKG_USE_TEST_SIGNAL
+        bool "Eingebautes Testsignal statt ADC verwenden"
+        default n
+        help
+            Erzeugt ein einfaches synthetisches EKG auf dem ESP32 selbst.
+            Praktisch für Wokwi oder solange noch keine Elektroden angeschlossen sind.
+
+    config EKG_ADC_GPIO
+        int "ADC-Eingang (GPIO, nur ADC1: 32-39)"
+        default 34
+        range 32 39
+
+    config EKG_LO_PLUS_GPIO
+        int "Lead-off LO+ (GPIO, -1 = nicht verwendet)"
+        default 32
+
+    config EKG_LO_MINUS_GPIO
+        int "Lead-off LO- (GPIO, -1 = nicht verwendet)"
+        default 33
+
+endmenu

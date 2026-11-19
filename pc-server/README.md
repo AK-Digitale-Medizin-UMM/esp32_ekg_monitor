@@ -32,7 +32,6 @@ server/
   sources/synthetic.py  synthetisches EKG (Sinus, VHF, ST-Hebung, AV-Block I°)
   main.py             HTTP/WebSocket-Endpunkte (FastAPI)
   static/index.html   Mini-Live-Viewer zum Testen
-esp32-arduino-sender/ Arduino-Sketch (Referenz für den ESP32-Sender)
 tools/fake_esp32.py   simuliert einen ESP32 von außen
 ```
 
@@ -91,12 +90,25 @@ Echten Ingest-Weg ohne Hardware testen (zweites Terminal):
 python -m tools.fake_esp32 --rhythm afib
 ```
 
-ESP32: in `esp32-arduino-sender/ekg_sender/ekg_sender.ino` WLAN und `SERVER_URL` (IP des Laptops) eintragen.
+ESP32: siehe Abschnitt „Firmware (ESP-IDF)“ unten.
 
-## Hinweis zur Firmware
+## Firmware (ESP-IDF)
 
-Der Sketch ist mit dem Arduino-Framework geschrieben, das Repo nutzt ESP-IDF (`main/main.c`).
-Er dient als Referenz für das Protokoll; in ESP-IDF geht dasselbe mit `esp_http_client`.
+Die Sender-Firmware liegt im Repo-Root unter `main/main.c` (ESP-IDF v5.x).
+
+```bash
+idf.py menuconfig      # → "EKG Sender": WLAN, Server-URL, Pins, Testsignal
+idf.py build flash monitor
+```
+
+- **Server-URL:** IP des Laptops, auf dem der Server läuft, z. B. `http://192.168.0.10:8000/api/v1/ingest`
+  (Laptop-IP: `ipconfig` / `ip a`; ESP32 und Laptop müssen im selben WLAN sein).
+- **Ohne Elektroden / in Wokwi:** „Eingebautes Testsignal statt ADC verwenden“ aktivieren.
+  WLAN in Wokwi: `Wokwi-GUEST`, ohne Passwort. Damit der simulierte ESP32 den Server
+  auf eurem Laptop erreicht, braucht ihr das Wokwi-Gateway (siehe Wokwi-Doku zu ESP32 WiFi).
+- **Pins (Standard):** AD8232 OUTPUT → GPIO 34, LO+ → GPIO 32, LO- → GPIO 33.
+- Abtastung per `esp_timer` (250 Hz), Senden in eigenem Task. Hängt das Netz, werden Pakete
+  verworfen statt die Abtastung zu blockieren – der Server sieht das als Lücke in `seq`.
 
 ## Server auf dem ESP32?
 

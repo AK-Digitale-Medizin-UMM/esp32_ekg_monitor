@@ -1,7 +1,9 @@
 # EKG-Projekt – PC-Server
 
 Alle Befehle unten im Ordner `pc-server/` ausführen (`cd pc-server`).
-Der bestehende ESP-IDF-Code (`main/`) und die Web-Oberfläche (`web/`) bleiben davon unberührt.
+Der PC-Server ist optional. Die [aktuelle Firmware](../README.md) hostet ihren
+eigenen Live-Viewer und sendet keine Pakete an den PC-Server. Das folgende
+Schema beschreibt kompatible Sender (z. B. `fake_esp32`) und den PC-Server.
 
 ## Architektur
 
@@ -112,44 +114,7 @@ Echten Ingest-Weg ohne Hardware testen (zweites Terminal):
 python -m tools.fake_esp32 --rhythm afib
 ```
 
-ESP32: siehe Abschnitt „Firmware (ESP-IDF)“ unten.
-
-## Firmware (ESP-IDF)
-
-Die Sender-Firmware liegt im Repo-Root unter `main/main.c` (ESP-IDF v6.1, Target `esp32`).
-Umgebung und Build-Regeln: siehe Projekt-Anleitung „ESP32 firmware – instructions for coding agents“.
-
-```bash
-# im Repo-Root, mit geladener Umgebung (direnv / use flake ../esp32-dev)
-idf.py menuconfig      # → "EKG Sender": WLAN, Server-URL, Pins, Testsignal
-idf.py build flash monitor
-# ohne direnv:
-nix develop ../esp32-dev -c idf.py build
-```
-
-- **Server-URL:** IP des Laptops, auf dem der Server läuft, z. B. `http://192.168.0.10:8000/api/v1/ingest`
-  (Laptop-IP: `ipconfig` / `ip a`; ESP32 und Laptop müssen im selben WLAN sein).
-- **WLAN-Zugangsdaten** nur lokal in `menuconfig` setzen – sie landen in der gitignorierten
-  `sdkconfig`. Nicht in `sdkconfig.defaults` übernehmen.
-- **Ohne Elektroden:** „Eingebautes Testsignal statt ADC verwenden“ aktivieren.
-- **Pins (Standard):** AD8232 OUTPUT → GPIO 34, LO+ → GPIO 32, LO- → GPIO 33.
-- Abtastung per `esp_timer` (250 Hz), Senden in eigenem Task. Hängt das Netz, werden Pakete
-  verworfen statt die Abtastung zu blockieren – der Server sieht das als Lücke in `seq`.
-- Komponenten: `esp_wifi`, `esp_netif`, `esp_event`, `nvs_flash`, `esp_http_client`, `esp_adc`,
-  `esp_timer`, `esp_driver_gpio` (v6: nicht mehr das alte `driver`). Kein cJSON nötig.
-
-## Server auf dem ESP32?
-
-Möglich, aber ich würde es in zwei Stufen machen:
-
-1. **Jetzt:** Server läuft auf dem Laptop, der ESP32 ist nur Sender. Einfach zu debuggen,
-   Speicherplatz und Analyse sind kein Problem.
-2. **Später:** Der ESP32 bekommt einen schlanken Webserver (z. B. `ESPAsyncWebServer`),
-   der **dieselben Pfade und dasselbe JSON** bereitstellt (`/ws/live`, `/api/v1/devices`).
-   Dann kann die App ohne Änderung direkt mit dem ESP32 reden (z. B. ESP32 als eigener
-   WLAN-Access-Point). Aufnahmen speichert dann die App, nicht der ESP32 (wenig Flash/RAM).
-
-Weil das Protokoll festgelegt ist, ist dieser Umzug später kein Umbau.
+Für Live-Daten direkt vom ESP32 siehe [Firmware-Schnellstart](../README.md).
 
 ## Sicherheit
 

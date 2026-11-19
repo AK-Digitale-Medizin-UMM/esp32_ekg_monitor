@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECG Monitor</title>
+<style>
+  :root { color-scheme: dark; font: 16px system-ui, sans-serif; background: #10201d; color: #e5f1ec; }
+  body { max-width: 65rem; margin: 2rem auto; padding: 0 1rem; }
+  canvas { display: block; width: 100%; height: clamp(15rem, 45vh, 28rem); border: 1px solid #38564d; background: #132a24; }
+  p { color: #bdd6ca; }
+</style>
+<main>
+  <h1>ECG Monitor</h1>
+  <p id="status" role="status">Connecting…</p>
+  <canvas aria-label="Live single-lead ECG trace"></canvas>
+  <p>Last 6 seconds · Raw 12-bit ADC counts (0–4095) · Live only</p>
+  <p>Open Wi-Fi: use only with synthetic or bench signals. Not for diagnosis.</p>
+</main>
+<script>
+  const canvas = document.querySelector('canvas');
+  const ctx = canvas.getContext('2d');
+  const status = document.querySelector('#status');
+  const seconds = 6;
+  let packets = [];
+
+  function draw() {
+    const { width, height } = canvas.getBoundingClientRect();
+    const scale = Math.min(window.devicePixelRatio || 1, 3);
+    const w = Math.round(width * scale);
+    const h = Math.round(height * scale);
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.strokeStyle = '#38564d';
+    ctx.beginPath();
+    for (let i = 1; i < seconds; i++) {
+      ctx.moveTo(i * width / seconds, 0);
+      ctx.lineTo(i * width / seconds, height);
+    }
+    for (let i = 1; i < 4; i++) {
+      ctx.moveTo(0, i * height / 4);
+      ctx.lineTo(width, i * height / 4);
+    }
+    ctx.stroke();
+
+    const newest = packets.at(-1);
+    if (!newest) return;
+    const end = (newest.seq + 1) * newest.samples.length;
+    const start = end - seconds * newest.fs;
+    let previous = -2;
+    ctx.strokeStyle = '#7ff2b5';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const { seq, samples } of packets) {
+      for (let i = 0; i < samples.length; i++) {
+        const index = seq * samples.length + i;
+        if (index < start) continue;
+        const x = (index - start) * width / (end - start);
+        const y = height * (0.95 - 0.9 * samples[i] / 4095);
+        if (index === previous + 1) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+        previous = index;
+      }
+    }
+    ctx.stroke();
+  }
+
+  function connect() {
+    status.textContent = 'Connecting…';
+    const socket = new WebSocket(`ws://${location.host}/ws/live`);
+    let watchdog;
+    function expectPacket() {
+      clearTimeout(watchdog);
+      watchdog = setTimeout(() => socket.close(), 10000);
+    }
+    expectPacket();
+    socket.addEventListener('open', () => { status.textContent = 'Waiting for samples…'; });
+    socket.addEventListener('message', ({ data }) => {
+      const packet = JSON.parse(data);
+      expectPacket();
+      const last = packets.at(-1);
+      if (last && (packet.seq <= last.seq || packet.fs !== last.fs ||
+                   packet.samples.length !== last.samples.length)) packets = [];
+      packets.push(packet);
+      const keep = Math.ceil(seconds * packet.fs / packet.samples.length) + 1;
+      while (packets.length > keep || packet.seq - packets[0].seq >= keep) packets.shift();
+      status.textContent = `${packet.device_id} · ${packet.fs} Hz · ${
+        packet.source === 'synthetic' ? 'Test signal' : packet.lead_off ? 'Leads off' : 'ADC live'}`;
+      draw();
+    });
+    socket.addEventListener('close', () => {
+      clearTimeout(watchdog);
+      status.textContent = 'Disconnected · retrying…';
+      packets = [];
+      draw();
+      setTimeout(connect, 1500);
+    });
+  }
+  new ResizeObserver(draw).observe(canvas);
+  connect();
+</script>
+</html>

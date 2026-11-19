@@ -1,26 +1,16 @@
-menu "EKG Sender"
+menu "EKG Monitor"
 
-    config EKG_WIFI_SSID
-        string "WLAN SSID"
-        default ""
-        help
-            Name des WLANs. Nur lokal setzen (sdkconfig), nicht committen.
-
-    config EKG_WIFI_PASSWORD
-        string "WLAN Passwort"
-        default ""
-        help
-            Nur lokal setzen (sdkconfig), nicht committen.
-
-    config EKG_SERVER_URL
-        string "Server-URL (Ingest-Endpunkt)"
-        default "http://192.168.0.10:8000/api/v1/ingest"
-        help
-            IP des Laptops, auf dem pc-server läuft, plus /api/v1/ingest.
+    config EKG_ONBOARD_SERVER
+        bool
+        default y
+        select HTTPD_WS_SUPPORT
+        select HTTPD_WS_POST_HANDSHAKE_CB_SUPPORT
 
     config EKG_DEVICE_ID
         string "Geräte-ID"
         default "esp32-01"
+        help
+            1–64 Zeichen: A-Z, a-z, 0-9, Punkt, Unterstrich oder Bindestrich.
 
     config EKG_SAMPLE_RATE_HZ
         int "Abtastrate (Hz)"
@@ -34,7 +24,7 @@ menu "EKG Sender"
 
     config EKG_USE_TEST_SIGNAL
         bool "Eingebautes Testsignal statt ADC verwenden"
-        default n
+        default y
         help
             Erzeugt ein einfaches synthetisches EKG auf dem ESP32 selbst.
             Praktisch, solange noch keine Elektroden angeschlossen sind.

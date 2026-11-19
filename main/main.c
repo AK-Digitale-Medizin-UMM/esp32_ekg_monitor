@@ -1,5 +1,5 @@
 /*
- * EKG-Sender (ESP-IDF v5.x)
+ * EKG-Sender (ESP-IDF v6.1, Target esp32)
  *
  * Tastet das EKG-Signal mit fester Rate ab, bündelt die Werte zu Paketen und
  * schickt sie als JSON (Protokoll v1, siehe pc-server/README.md) per HTTP POST
@@ -8,6 +8,8 @@
  *   esp_timer (Abtastung, z. B. 250 Hz) ──Queue──▶ sender_task (HTTP POST)
  *
  * Einstellungen (WLAN, Server-URL, Pins, Testsignal):  idf.py menuconfig → "EKG Sender"
+ * WLAN-Zugangsdaten landen nur in der lokalen sdkconfig (gitignored) –
+ * nicht in sdkconfig.defaults eintragen.
  *
  * Verkabelung AD8232 (Standard):
  *   OUTPUT → GPIO 34   LO+ → GPIO 32   LO- → GPIO 33   3V3 → 3V3   GND → GND

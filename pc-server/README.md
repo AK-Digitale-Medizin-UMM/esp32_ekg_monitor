@@ -94,21 +94,27 @@ ESP32: siehe Abschnitt „Firmware (ESP-IDF)“ unten.
 
 ## Firmware (ESP-IDF)
 
-Die Sender-Firmware liegt im Repo-Root unter `main/main.c` (ESP-IDF v5.x).
+Die Sender-Firmware liegt im Repo-Root unter `main/main.c` (ESP-IDF v6.1, Target `esp32`).
+Umgebung und Build-Regeln: siehe Projekt-Anleitung „ESP32 firmware – instructions for coding agents“.
 
 ```bash
+# im Repo-Root, mit geladener Umgebung (direnv / use flake ../esp32-dev)
 idf.py menuconfig      # → "EKG Sender": WLAN, Server-URL, Pins, Testsignal
 idf.py build flash monitor
+# ohne direnv:
+nix develop ../esp32-dev -c idf.py build
 ```
 
 - **Server-URL:** IP des Laptops, auf dem der Server läuft, z. B. `http://192.168.0.10:8000/api/v1/ingest`
   (Laptop-IP: `ipconfig` / `ip a`; ESP32 und Laptop müssen im selben WLAN sein).
-- **Ohne Elektroden / in Wokwi:** „Eingebautes Testsignal statt ADC verwenden“ aktivieren.
-  WLAN in Wokwi: `Wokwi-GUEST`, ohne Passwort. Damit der simulierte ESP32 den Server
-  auf eurem Laptop erreicht, braucht ihr das Wokwi-Gateway (siehe Wokwi-Doku zu ESP32 WiFi).
+- **WLAN-Zugangsdaten** nur lokal in `menuconfig` setzen – sie landen in der gitignorierten
+  `sdkconfig`. Nicht in `sdkconfig.defaults` übernehmen.
+- **Ohne Elektroden:** „Eingebautes Testsignal statt ADC verwenden“ aktivieren.
 - **Pins (Standard):** AD8232 OUTPUT → GPIO 34, LO+ → GPIO 32, LO- → GPIO 33.
 - Abtastung per `esp_timer` (250 Hz), Senden in eigenem Task. Hängt das Netz, werden Pakete
   verworfen statt die Abtastung zu blockieren – der Server sieht das als Lücke in `seq`.
+- Komponenten: `esp_wifi`, `esp_netif`, `esp_event`, `nvs_flash`, `esp_http_client`, `esp_adc`,
+  `esp_timer`, `esp_driver_gpio` (v6: nicht mehr das alte `driver`). Kein cJSON nötig.
 
 ## Server auf dem ESP32?
 

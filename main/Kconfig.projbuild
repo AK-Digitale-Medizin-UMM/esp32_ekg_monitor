@@ -2,13 +2,15 @@ menu "EKG Sender"
 
     config EKG_WIFI_SSID
         string "WLAN SSID"
-        default "Wokwi-GUEST"
+        default ""
         help
-            Name des WLANs. "Wokwi-GUEST" funktioniert im Wokwi-Simulator.
+            Name des WLANs. Nur lokal setzen (sdkconfig), nicht committen.
 
     config EKG_WIFI_PASSWORD
         string "WLAN Passwort"
         default ""
+        help
+            Nur lokal setzen (sdkconfig), nicht committen.
 
     config EKG_SERVER_URL
         string "Server-URL (Ingest-Endpunkt)"
@@ -35,7 +37,7 @@ menu "EKG Sender"
         default n
         help
             Erzeugt ein einfaches synthetisches EKG auf dem ESP32 selbst.
-            Praktisch für Wokwi oder solange noch keine Elektroden angeschlossen sind.
+            Praktisch, solange noch keine Elektroden angeschlossen sind.
 
     config EKG_ADC_GPIO
         int "ADC-Eingang (GPIO, nur ADC1: 32-39)"

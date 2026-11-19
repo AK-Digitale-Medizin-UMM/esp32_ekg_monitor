@@ -2,18 +2,26 @@
 
 Start:  uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 Doku:   http://localhost:8000/docs   (automatisch generiert, zum Ausprobieren)
-Viewer: http://localhost:8000/
+Web-UI: http://localhost:8000/        (Ordner web/ im Repo-Root, siehe EKG_WEB_DIR)
+
+Umgebungsvariablen:
+  EKG_WEB_DIR       Ordner der Web-Oberfläche (Standard: <repo>/web)
+  EKG_CORS_ORIGINS  kommagetrennte Origins, die die API von außen nutzen dürfen,
+                    z. B. "http://localhost:5500" – nur nötig, wenn die Oberfläche
+                    von einem anderen Server ausgeliefert wird. Standard: aus.
 """
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -28,13 +36,10 @@ recorder = Recorder(Path(__file__).resolve().parent.parent / "data" / "recording
 hub.add_listener(recorder.on_packet)
 synthetic: dict[str, SyntheticSource] = {}
 
-STATIC = Path(__file__).parent / "static"
-app.mount("/static", StaticFiles(directory=STATIC), name="static")
+WEB_DIR = Path(os.environ.get("EKG_WEB_DIR") or Path(__file__).resolve().parents[2] / "web")
 
-
-@app.get("/", include_in_schema=False)
-def index():
-    return FileResponse(STATIC / "index.html")
+if origins := [o.strip() for o in os.environ.get("EKG_CORS_ORIGINS", "").split(",") if o.strip()]:
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
 
 
 @app.get("/api/v1/health")
@@ -86,15 +91,27 @@ async def live(ws: WebSocket, device_id: str | None = None):
     """Live-Stream für Clients (Browser, App). Optional nach Gerät filtern: /ws/live?device_id=esp32-01"""
     await ws.accept()
     q = hub.subscribe()
-    try:
+
+    async def forward() -> None:
         while True:
             pkt = await q.get()
             if device_id and pkt.device_id != device_id:
                 continue
             await ws.send_json(pkt.to_dict())
-    except (WebSocketDisconnect, RuntimeError):
-        pass
+
+    async def until_closed() -> None:
+        # Ohne eigenes receive() würde ein Client ohne neue Pakete nie als getrennt erkannt –
+        # dann hängt auch das Beenden/Neuladen des Servers ("Waiting for background tasks").
+        while (await ws.receive())["type"] != "websocket.disconnect":
+            pass
+
+    tasks = {asyncio.create_task(forward()), asyncio.create_task(until_closed())}
+    try:
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
     finally:
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         hub.unsubscribe(q)
 
 
@@ -116,7 +133,7 @@ class SyntheticStart(BaseModel):
 
 
 @app.post("/api/v1/sources/synthetic/start")
-def synthetic_start(cfg: SyntheticStart):
+async def synthetic_start(cfg: SyntheticStart):
     if cfg.device_id in synthetic and synthetic[cfg.device_id].running:
         raise HTTPException(409, "Läuft bereits")
     src = SyntheticSource(hub, SyntheticConfig(**cfg.model_dump()))
@@ -139,12 +156,13 @@ class RecordingStart(BaseModel):
     device_id: str
     label: str = ""
     subject: str = ""   # z. B. Proband-Kürzel – bitte keine Klarnamen speichern
+    duration_s: float | None = Field(None, gt=0, le=3600)  # gesetzt → Server stoppt selbst
 
 
 @app.post("/api/v1/recordings/start", status_code=201)
 def recording_start(body: RecordingStart):
     try:
-        rec = recorder.start(body.device_id, body.label, body.subject)
+        rec = recorder.start(body.device_id, body.label, body.subject, body.duration_s)
     except ValueError as e:
         raise HTTPException(409, str(e))
     return {"id": rec.id, "device_id": rec.device_id}
@@ -164,6 +182,15 @@ def recordings():
     return recorder.list_recordings()
 
 
+@app.get("/api/v1/recordings/{rid}")
+def recording_meta(rid: str):
+    """Metadaten einer Aufnahme; bei laufenden Aufnahmen mit aktuellem sample_count."""
+    meta = recorder.get(rid)
+    if not meta:
+        raise HTTPException(404, "Nicht gefunden")
+    return meta
+
+
 @app.get("/api/v1/recordings/{rid}/csv")
 def recording_csv(rid: str):
     p = recorder.csv_path(rid)
@@ -178,3 +205,14 @@ async def _shutdown():
         await src.stop()
     for rec in recorder.active():
         recorder.stop(rec.device_id)
+
+
+# ---------------------------------------------------------------- Web-Oberfläche
+# Zuletzt eingehängt, damit API- und WebSocket-Routen Vorrang haben.
+if (WEB_DIR / "index.html").exists():
+    app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+else:
+    @app.get("/", include_in_schema=False, response_class=HTMLResponse)
+    def index():
+        return (f"<p>Keine Web-Oberfläche gefunden unter <code>{WEB_DIR}</code>. "
+                "Pfad per <code>EKG_WEB_DIR</code> setzen. API: <a href='/docs'>/docs</a></p>")

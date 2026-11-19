@@ -30,6 +30,7 @@ class Recording:
     adc_bits: int | None = None
     sample_count: int = 0
     lost_packets: int = 0
+    max_seconds: float | None = None   # gesetzt → Aufnahme stoppt nach genau so vielen Sekunden
     _last_seq: int | None = None
 
 
@@ -39,11 +40,13 @@ class Recorder:
         self.base.mkdir(parents=True, exist_ok=True)
         self._active: dict[str, tuple[Recording, object, csv.writer]] = {}  # device_id → …
 
-    def start(self, device_id: str, label: str = "", subject: str = "") -> Recording:
+    def start(self, device_id: str, label: str = "", subject: str = "",
+              max_seconds: float | None = None) -> Recording:
         if device_id in self._active:
             raise ValueError(f"Für {device_id} läuft bereits eine Aufnahme")
         rid = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
-        rec = Recording(id=rid, device_id=device_id, label=label, subject=subject)
+        rec = Recording(id=rid, device_id=device_id, label=label, subject=subject,
+                        max_seconds=max_seconds)
         fh = open(self.base / f"{rid}.csv", "w", newline="")
         w = csv.writer(fh)
         w.writerow(["sample_index", "t_s", "value", "lead_off", "seq"])
@@ -71,11 +74,16 @@ class Recorder:
         if rec._last_seq is not None and pkt.seq > rec._last_seq + 1:
             rec.lost_packets += pkt.seq - rec._last_seq - 1
         rec._last_seq = pkt.seq
+        limit = round(rec.max_seconds * rec.fs) if rec.max_seconds else None
         for x in pkt.samples:
+            if limit is not None and rec.sample_count >= limit:
+                break
             i = rec.sample_count
             w.writerow([i, f"{i / rec.fs:.4f}", x, int(pkt.lead_off), pkt.seq])
             rec.sample_count += 1
         fh.flush()
+        if limit is not None and rec.sample_count >= limit:
+            self.stop(pkt.device_id)
 
     def active(self) -> list[Recording]:
         return [r for r, _, _ in self._active.values()]
@@ -86,11 +94,23 @@ class Recorder:
             out.append(json.loads(p.read_text()))
         return out
 
+    def get(self, rid: str) -> dict | None:
+        """Metadaten einer Aufnahme – bei laufenden Aufnahmen mit aktuellem Stand."""
+        for rec, _, _ in self._active.values():
+            if rec.id == rid:
+                return {**self._meta(rec), "active": True}
+        p = self.base / f"{Path(rid).name}.meta.json"
+        return {**json.loads(p.read_text()), "active": False} if p.exists() else None
+
     def csv_path(self, rid: str) -> Path | None:
         p = self.base / f"{Path(rid).name}.csv"
         return p if p.exists() else None
 
-    def _write_meta(self, rec: Recording) -> None:
+    @staticmethod
+    def _meta(rec: Recording) -> dict:
         meta = {k: v for k, v in asdict(rec).items() if not k.startswith("_")}
         meta["duration_s"] = rec.sample_count / rec.fs if rec.fs else 0
-        (self.base / f"{rec.id}.meta.json").write_text(json.dumps(meta, indent=2))
+        return meta
+
+    def _write_meta(self, rec: Recording) -> None:
+        (self.base / f"{rec.id}.meta.json").write_text(json.dumps(self._meta(rec), indent=2))

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>EKG Live</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 20px; background: #111; color: #eee; }
+  canvas { background: #fff7f7; border-radius: 6px; width: 100%; height: 300px; }
+  button, select { margin: 4px 4px 12px 0; padding: 6px 10px; }
+  #status { font-size: 13px; color: #aaa; }
+</style>
+</head>
+<body>
+<h2>EKG Live-Viewer (Test)</h2>
+<div>
+  <button onclick="startSyn()">Synthetisch starten</button>
+  <select id="rhythm">
+    <option value="sinus">Sinusrhythmus</option>
+    <option value="afib">Vorhofflimmern</option>
+    <option value="st_elevation">ST-Hebung</option>
+    <option value="av_block_1">AV-Block I°</option>
+  </select>
+  <button onclick="stopSyn()">Synthetisch stoppen</button>
+  <button onclick="rec('start')">● Aufnahme</button>
+  <button onclick="rec('stop')">■ Stopp</button>
+</div>
+<div id="status">verbinde…</div>
+<canvas id="c" width="1500" height="300"></canvas>
+<script>
+const SECONDS = 5;
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+let buf = [], fs = 250, unit = 'mV', currentDevice = null, lastInfo = '';
+
+const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/live`);
+ws.onopen = () => status('verbunden – warte auf Daten');
+ws.onclose = () => status('Verbindung getrennt');
+ws.onmessage = (e) => {
+  const p = JSON.parse(e.data);
+  if (!currentDevice) currentDevice = p.device_id;
+  if (p.device_id !== currentDevice) return;
+  fs = p.fs; unit = p.unit;
+  for (const s of p.samples) buf.push(unit === 'adc_raw' ? (s - 2048) / 600 : s);
+  const max = fs * SECONDS; if (buf.length > max) buf = buf.slice(-max);
+  lastInfo = `${p.device_id} · ${p.source} · ${fs} Hz · seq ${p.seq}${p.lead_off ? ' · ⚠ Elektrode lose' : ''}`;
+};
+
+function draw() {
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#f3caca'; ctx.lineWidth = 1;       // EKG-Papier: 0,2 s / 0,5 mV
+  for (let x = 0; x < W; x += W / (SECONDS * 5)) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += H / 6) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath();
+  const n = fs * SECONDS;
+  buf.forEach((v, i) => {
+    const x = (i / n) * W, y = H * 0.6 - v * (H / 3);   // 1 mV = 1/3 Höhe
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.stroke();
+  if (lastInfo) status(lastInfo);
+  requestAnimationFrame(draw);
+}
+draw();
+
+function status(t) { document.getElementById('status').textContent = t; }
+async function post(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const j = await r.json(); if (!r.ok) alert(JSON.stringify(j)); return j;
+}
+async function startSyn() {
+  await post('/api/v1/sources/synthetic/start', { rhythm: document.getElementById('rhythm').value });
+  currentDevice = 'synthetic-01'; buf = [];
+}
+async function stopSyn() { await post('/api/v1/sources/synthetic/synthetic-01/stop'); }
+async function rec(action) {
+  if (!currentDevice) return alert('Noch kein Gerät aktiv');
+  const j = action === 'start'
+    ? await post('/api/v1/recordings/start', { device_id: currentDevice, label: 'viewer' })
+    : await post(`/api/v1/recordings/${currentDevice}/stop`);
+  console.log(j);
+}
+</script>
+</body>
+</html>
